@@ -202,3 +202,28 @@ function addQuote() {
 
 // Initialize the app when the page loads
 document.addEventListener('DOMContentLoaded', init);
+// Function to add a new quote
+function addQuote() {
+  const textInput = document.getElementById("newQuoteText");
+  const categoryInput = document.getElementById("newQuoteCategory");
+
+  const text = textInput.value.trim();
+  const category = categoryInput.value.trim();
+
+  if (text && category) {
+    // Add to quotes array
+    quotes.push({ text, category });
+
+    // Update the DOM to show the newly added quote
+    quoteDisplay.innerHTML = `
+      <p>"${text}"</p>
+      <small>Category: ${category}</small>
+    `;
+
+    // Clear input fields
+    textInput.value = "";
+    categoryInput.value = "";
+  } else {
+    alert("Please enter both a quote and a category.");
+  }
+}
