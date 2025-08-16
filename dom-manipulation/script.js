@@ -11,6 +11,11 @@ JSON.parse(localStorage.getItem("quotes")) ||
 const quoteDisplay = document.getElementById("quoteDisplay");
 const newQuoteBtn = document.getElementById("newQuote");
 
+//save quotes to localStorage
+function saveQuotes() {
+    localStorage.setItem("quotes", JSON.stringify(quotes));
+}
+
 // Function to show a random quote
 function showRandomQuote() {
   const randomIndex = Math.floor(Math.random() * quotes.length);
@@ -122,4 +127,3 @@ window.onload = () => {
     showRandomQuote();
   }
 };
-
