@@ -2,56 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dynamic Quote Generator</title>
 </head>
 <body>
   <h1>Dynamic Quote Generator</h1>
 
-  <!-- Conflict banner -->
-  <div id="conflictNotification" class="hidden notice">
-    <p>⚠️ Conflicts detected during sync.</p>
-    <div class="actions">
-      <button onclick="resolveConflicts('server')">Keep Server</button>
-      <button onclick="resolveConflicts('local')">Keep Local</button>
-    </div>
-  </div>
-  
-   <!--Current Quote -->
-  <div id="quoteDisplay" class="quote"></div>
+  <!-- Quote Display -->
+  <p id="quoteDisplay">Click "New Quote" to see a quote.</p>
+  <button id="newQuote">New Quote</button>
 
-    <!-- Controls -->
-  <div class="controls">
-    <button id="newQuote">Show New Quote</button>
-    <button id="syncQuotes" onclick="syncWithServer()">Sync with Server</button>
-  </div>
-  
-  
-  
- 
-  <div class="card">
-    <h3>Add New Quote</h3>
-    <input id="newQuoteText" type="text" placeholder="Enter a new quote" />
-    <input id="newQuoteCategory" type="text" placeholder="Enter quote category" />
-    <button onclick="addQuote()">Add Quote</button>
-  </div>
+  <!-- Add New Quote -->
+  <h2>Add a New Quote</h2>
+  <input type="text" id="newQuoteText" placeholder="Enter quote text">
+  <input type="text" id="newQuoteCategory" placeholder="Enter category (optional)">
+  <button onclick="addQuote()">Add Quote</button>
 
-     <!--Filter-->
-     <div class="card">
-  <h3>Filter by Category</h3>
+  <!-- Filter by Category -->
+  <h2>Filter Quotes</h2>
   <select id="categoryFilter" onchange="filterQuotes()">
     <option value="all">All Categories</option>
-    <!-- Categories will be populated dynamically from JS -->
   </select>
-  </div>
-  
- <!--Import/Export-->
-  <div class="card">
-  <h3>Import / Export Quotes</h3>
-  <button onclick="exportToJsonFile()">Export Quotes</button>
-  <input type="file" id="importFile" accept=".json" onchange="importFromJsonFile(event)" />
-</div>
 
-<script src="script.js"></script>
+  <!-- Export & Import -->
+  <h2>Export / Import Quotes</h2>
+  <button onclick="exportToJsonFile()">Export Quotes</button>
+  <input type="file" id="importFile" accept=".json" onchange="importFromJsonFile(event)">
+
+  <!-- Conflict Resolution -->
+  <div id="conflictNotification" class="hidden">
+    <p>Conflicts detected between local and server quotes.</p>
+    <button onclick="resolveConflicts('local')">Keep Local</button>
+    <button onclick="resolveConflicts('server')">Use Server</button>
+  </div>
+
+  <!-- Script -->
+  <script src="script.js"></script>
 </body>
 </html>
+
