@@ -1,10 +1,15 @@
-// ---------- Quotes Data ----------
-let quotes = [
+// ---------- Load Quotes from Local Storage ----------
+let quotes = JSON.parse(localStorage.getItem("quotes")) || [
   { text: "The best way to get started is to quit talking and begin doing.", category: "Motivation" },
   { text: "Success is not in what you have, but who you are.", category: "Inspiration" },
   { text: "Your time is limited, so don’t waste it living someone else’s life.", category: "Life" },
   { text: "If you can dream it, you can do it.", category: "Motivation" }
 ];
+
+// ---------- Function to Save Quotes to Local Storage ----------
+function saveQuotes() {
+  localStorage.setItem("quotes", JSON.stringify(quotes));
+}
 
 // ---------- Function to Display Random Quote ----------
 function showRandomQuote() {
@@ -12,11 +17,8 @@ function showRandomQuote() {
   const quoteObj = quotes[randomIndex];
 
   const quoteDisplay = document.getElementById("quoteDisplay");
-
-  // Clear existing content
   quoteDisplay.innerHTML = "";
 
-  // Create elements dynamically
   const quoteText = document.createElement("p");
   quoteText.textContent = `"${quoteObj.text}"`;
 
@@ -25,56 +27,50 @@ function showRandomQuote() {
   quoteCategory.style.fontStyle = "italic";
   quoteCategory.style.color = "gray";
 
-  // Append to DOM
   quoteDisplay.appendChild(quoteText);
   quoteDisplay.appendChild(quoteCategory);
+
+  //  NEW: Save last viewed quote in session storage
+  sessionStorage.setItem("lastQuote", JSON.stringify(quoteObj));
 }
 
-// ---------- Function to Create "Add Quote" Form ----------
-function createAddQuoteForm() {
-  const formContainer = document.createElement("div");
-  formContainer.id = "quoteForm";
+// ---------- Function to Add New Quote ----------
+function addQuote() {
+  const newQuoteText = document.getElementById("newQuoteText").value.trim();
+  const newQuoteCategory = document.getElementById("newQuoteCategory").value.trim();
 
-  // Input for Quote Text
-  const inputText = document.createElement("input");
-  inputText.type = "text";
-  inputText.placeholder = "Enter quote text";
+  if (newQuoteText && newQuoteCategory) {
+    quotes.push({ text: newQuoteText, category: newQuoteCategory });
 
-  // Input for Category
-  const inputCategory = document.createElement("input");
-  inputCategory.type = "text";
-  inputCategory.placeholder = "Enter category";
+    // Save to local storage
+    saveQuotes();
 
-  // Submit Button
-  const addButton = document.createElement("button");
-  addButton.textContent = "Add Quote";
+    alert("✅ New quote added successfully!");
+    document.getElementById("newQuoteText").value = "";
+    document.getElementById("newQuoteCategory").value = "";
 
-  // Append inputs and button
-  formContainer.appendChild(inputText);
-  formContainer.appendChild(inputCategory);
-  formContainer.appendChild(addButton);
+    // Show newly added quote
+    document.getElementById("quoteDisplay").innerHTML =
+      `<p>"${newQuoteText}"</p><span style="font-style:italic;color:gray;">— ${newQuoteCategory}</span>`;
 
-  // Append to body (or another section)
-  document.body.appendChild(formContainer);
-
-  // Add event listener
-  addButton.addEventListener("click", function () {
-    const newQuote = inputText.value.trim();
-    const newCategory = inputCategory.value.trim();
-
-    if (newQuote && newCategory) {
-      quotes.push({ text: newQuote, category: newCategory });
-      alert("New quote added successfully!");
-      inputText.value = "";
-      inputCategory.value = "";
-    } else {
-      alert("Please fill in both fields!");
-    }
-  });
+    //  NEW: Save newly added as last viewed in session storage
+    sessionStorage.setItem("lastQuote", JSON.stringify({ text: newQuoteText, category: newQuoteCategory }));
+  } else {
+    alert("⚠️ Please enter both quote and category!");
+  }
 }
 
-// ---------- Event Listeners ----------
+// ---------- Event Listener ----------
 document.getElementById("newQuote").addEventListener("click", showRandomQuote);
 
-// Call form creation on load
-createAddQuoteForm();
+// ---------- Load Last Viewed Quote from Session Storage ----------
+window.onload = function () {
+  //  NEW: Check session storage for last viewed quote
+  const lastQuote = sessionStorage.getItem("lastQuote");
+  if (lastQuote) {
+    const quoteObj = JSON.parse(lastQuote);
+    document.getElementById("quoteDisplay").innerHTML =
+      `<p>"${quoteObj.text}"</p><span style="font-style:italic;color:gray;">— ${quoteObj.category}</span>`;
+  }
+};
+
