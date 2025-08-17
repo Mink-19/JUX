@@ -260,4 +260,13 @@ window.onload = () => {
   // Start periodic sync (every 30s)
   setInterval(syncWithServer, 30000);
 };
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("newQuote").addEventListener("click", showRandomQuote);
+  document.getElementById("syncQuotes").addEventListener("click", syncWithServer);
+  document.getElementById("addQuoteBtn").addEventListener("click", addQuote);
+  document.getElementById("categoryFilter").addEventListener("change", filterQuotes);
+  document.getElementById("exportBtn").addEventListener("click", exportToJsonFile);
+  document.getElementById("importFile").addEventListener("change", importFromJsonFile);
+});
+
 
