@@ -8,47 +8,20 @@
 <body>
   <h1>Dynamic Quote Generator</h1>
 
-  <!-- Conflict banner -->
-  <div id="conflictNotification" class="hidden notice">
-    <p>⚠️ Conflicts detected during sync.</p>
-    <div class="row">
-      <button id="keepServer">Keep Server</button>
-      <button id="keepLocal">Keep Local</button>
-    </div>
-  </div>
-  
-  <!-- Current Quote -->
-  <div id="quoteDisplay" class="card"></div>
+  <!-- Placeholder for quote -->
+  <div id="quoteDisplay"></div>
 
-  <!-- Controls -->
-  <div class="controls">
-    <button id="newQuote">Show New Quote</button>
-    <button id="syncQuotes">Sync with Server</button>
-  </div>
-  
-  <div class="card">
-    <h3>Add New Quote</h3>
+  <!-- Button to show new quote -->
+  <button id="newQuote">Show New Quote</button>
+
+  <!-- Form to Add New Quotes -->
+  <div>
     <input id="newQuoteText" type="text" placeholder="Enter a new quote" />
     <input id="newQuoteCategory" type="text" placeholder="Enter quote category" />
-    <button id="addQuoteBtn">Add Quote</button>
+    <button onclick="addQuote()">Add Quote</button>
   </div>
 
-  <!-- Filter -->
-  <div class="card">
-    <h3>Filter by Category</h3>
-    <select id="categoryFilter">
-      <option value="all">All Categories</option>
-    </select>
-  </div>
-  
-  <!-- Import/Export -->
-  <div class="card">
-    <h3>Import / Export Quotes</h3>
-    <button id="exportBtn">Export Quotes</button>
-    <input type="file" id="importFile" accept=".json" />
-  </div>
-
+  <!-- Link to JavaScript file -->
   <script src="script.js"></script>
 </body>
 </html>
-
