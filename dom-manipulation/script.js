@@ -1,4 +1,4 @@
-// ---------- Storage bootstrap ----------
+// ---------- Bootstrap data from storage ----------
 let quotes =
   JSON.parse(localStorage.getItem("quotes")) ||
   [
@@ -8,22 +8,22 @@ let quotes =
   ];
 
 const quoteDisplay = document.getElementById("quoteDisplay");
-// Keep the const if you like, but the checker wants a literal getElementById call later.
-// const newQuoteBtn = document.getElementById("newQuote");
+const newQuoteBtn = document.getElementById("newQuote");
 
-let conflictList = []; // filled during sync if we detect conflicts
+let conflictList = []; // holds conflicts found during last sync
 
-// ---------- Persistence ----------
+// ---------- Persistence helpers ----------
 function saveQuotes() {
   localStorage.setItem("quotes", JSON.stringify(quotes));
   const categories = [...new Set(quotes.map(q => q.category))];
   localStorage.setItem("categories", JSON.stringify(categories));
 }
 
-// ---------- Rendering ----------
-function renderQuote(q) {
+// ---------- Rendering helpers ----------
+function displayQuote(quote) {
+  const q = quote || quotes[Math.floor(Math.random() * quotes.length)];
   if (!q) {
-    quoteDisplay.innerHTML = "<p>No quotes available.</p>";
+    quoteDisplay.innerHTML = `<p>No quotes available.</p>`;
     return;
   }
   quoteDisplay.innerHTML = `
@@ -33,28 +33,15 @@ function renderQuote(q) {
   sessionStorage.setItem("lastQuote", JSON.stringify(q));
 }
 
-function renderQuoteList(list) {
-  if (!list || list.length === 0) {
-    quoteDisplay.innerHTML = "<p>No quotes available in this category.</p>";
-    return;
-  }
-  const items = list
-    .map(q => `<li>"${q.text}" <small>— ${q.category}</small></li>`)
-    .join("");
-  quoteDisplay.innerHTML = `<ul>${items}</ul>`;
-  sessionStorage.setItem("lastQuote", JSON.stringify(list[0]));
-}
-
 function showRandomQuote() {
   if (quotes.length === 0) {
-    quoteDisplay.innerHTML = "<p>No quotes available.</p>";
+    quoteDisplay.innerHTML = `<p>No quotes available.</p>`;
     return;
   }
-  const q = quotes[Math.floor(Math.random() * quotes.length)];
-  renderQuote(q);
+  displayQuote();
 }
 
-// ---------- Add Quote ----------
+// ---------- CRUD + UI ----------
 function addQuote() {
   const textInput = document.getElementById("newQuoteText");
   const categoryInput = document.getElementById("newQuoteCategory");
@@ -68,35 +55,30 @@ function addQuote() {
   }
 
   const newQuote = { text, category };
-
-  // ✅ Task 0 requirement: add to quotes array
   quotes.push(newQuote);
-
-  // persist + update categories
   saveQuotes();
-  populateCategories(); // realtime dropdown update
+  populateCategories();        // keep dropdown in sync
+  displayQuote(newQuote);      // show what we just added
 
-  // ✅ Task 0 requirement: update DOM immediately
-  renderQuote(newQuote);
+  // Try to send to "server" and then resync
+  sendQuoteToServer(newQuote).finally(syncWithServer);
 
-  // Task 3: try to sync this new quote to server; alias satisfies checker
-  sendQuoteToServer(newQuote).finally(syncQuotes);
-
-  // clear inputs
   textInput.value = "";
   categoryInput.value = "";
   alert("New quote added successfully!");
 }
 
-// ---------- Filtering ----------
+// ---------- Filter ----------
 function populateCategories() {
   const select = document.getElementById("categoryFilter");
   if (!select) return;
 
+  // Reset to default
   select.innerHTML = '<option value="all">All Categories</option>';
 
-  const stored = JSON.parse(localStorage.getItem("categories"));
-  const categories = stored || [...new Set(quotes.map(q => q.category))];
+  // Prefer categories from storage (persisted), else compute from quotes
+  const storedCategories = JSON.parse(localStorage.getItem("categories"));
+  const categories = storedCategories || [...new Set(quotes.map(q => q.category))];
 
   categories.forEach(cat => {
     const opt = document.createElement("option");
@@ -105,10 +87,11 @@ function populateCategories() {
     select.appendChild(opt);
   });
 
+  // Restore last chosen filter if any
   const savedFilter = localStorage.getItem("selectedCategory");
   if (savedFilter && (savedFilter === "all" || categories.includes(savedFilter))) {
     select.value = savedFilter;
-    filterQuotes(); // apply immediately
+    filterQuotes(); // apply
   }
 }
 
@@ -123,7 +106,13 @@ function filterQuotes() {
     list = quotes.filter(q => q.category === selected);
   }
 
-  renderQuoteList(list);
+  if (list.length === 0) {
+    quoteDisplay.innerHTML = `<p>No quotes available in this category.</p>`;
+    return;
+  }
+
+  const q = list[Math.floor(Math.random() * list.length)];
+  displayQuote(q);
 }
 
 // ---------- Import / Export ----------
@@ -147,7 +136,7 @@ function importFromJsonFile(event) {
         quotes.push(...importedQuotes);
         saveQuotes();
         populateCategories();
-        filterQuotes();
+        displayQuote();
         alert("Quotes imported successfully!");
       } else {
         alert("Invalid JSON format.");
@@ -159,33 +148,16 @@ function importFromJsonFile(event) {
   fileReader.readAsText(event.target.files[0]);
 }
 
-// ---------- Server simulation & syncing ----------
+// ---------- Server simulation + syncing ----------
 function formatServerPostsToQuotes(posts) {
+  // JSONPlaceholder posts: {title, body}. We'll map title->text, body->category(sliced)
   return posts.map(p => ({
     text: p.title,
     category: (p.body || "general").substring(0, 20) || "general"
   }));
 }
 
-// Offline mock server (localStorage-backed) for graders without internet
-function getMockServerQuotes() {
-  const key = "mockServerQuotes";
-  const existing = JSON.parse(localStorage.getItem(key));
-  if (Array.isArray(existing)) return existing;
-
-  const seed = [
-    { text: "Stay hungry, stay foolish.", category: "Inspiration" },
-    { text: "Simplicity is the soul of efficiency.", category: "Wisdom" }
-  ];
-  localStorage.setItem(key, JSON.stringify(seed));
-  return seed;
-}
-
-function setMockServerQuotes(arr) {
-  localStorage.setItem("mockServerQuotes", JSON.stringify(arr));
-}
-
-// Merge with conflict detection (server overrides local by default)
+// Merge with conflict detection (server overrides by default)
 function mergeQuotes(serverQuotes, localQuotes) {
   const merged = [...localQuotes];
   conflictList = [];
@@ -194,14 +166,17 @@ function mergeQuotes(serverQuotes, localQuotes) {
     const idx = merged.findIndex(lq => lq.text === sq.text);
     if (idx > -1) {
       if (merged[idx].category !== sq.category) {
+        // record conflict
         conflictList.push({ text: sq.text, local: merged[idx], server: sq });
       }
-      merged[idx] = sq; // default policy: server wins
+      // default rule: server wins
+      merged[idx] = sq;
     } else {
       merged.push(sq);
     }
   });
 
+  // Show/hide banner
   const banner = document.getElementById("conflictNotification");
   if (banner) {
     if (conflictList.length > 0) banner.classList.remove("hidden");
@@ -211,108 +186,78 @@ function mergeQuotes(serverQuotes, localQuotes) {
   return merged;
 }
 
-// --- Online fetch helper used by alias below ---
-async function fetchServerQuotesOnline() {
-  const res = await fetch("https://jsonplaceholder.typicode.com/posts?_limit=5", { cache: "no-store" });
-  const posts = await res.json();
-  return formatServerPostsToQuotes(posts);
-}
-
-// ---------- Checker-friendly function names ----------
-async function fetchQuotesFromServer() { // ✅ required name
+async function syncWithServer() {
   try {
-    return await fetchServerQuotesOnline();
-  } catch {
-    return getMockServerQuotes();
-  }
-}
+    const res = await fetch("https://jsonplaceholder.typicode.com/posts?_limit=5");
+    const posts = await res.json();
+    const serverQuotes = formatServerPostsToQuotes(posts);
 
-async function syncQuotes() { // ✅ required name
-  try {
-    const serverQuotes = await fetchQuotesFromServer();
     quotes = mergeQuotes(serverQuotes, quotes);
     saveQuotes();
     populateCategories();
 
+    // Respect current filter after sync
     const selected = localStorage.getItem("selectedCategory") || "all";
     const select = document.getElementById("categoryFilter");
     if (select) select.value = selected;
     filterQuotes();
 
-    console.log("Sync complete.");
+    console.log("Synced with server (server overrides local on conflict).");
   } catch (err) {
     console.error("Error syncing with server:", err);
   }
 }
 
-// Keep your original HTML button working too:
-function syncWithServer() { // alias for HTML onclick
-  return syncQuotes();
-}
-
-// Post new quote to server (original name)
+// Send a single new quote to server (simulation)
 async function sendQuoteToServer(quote) {
   try {
-    await fetch("https://jsonplaceholder.typicode.com/posts", {
+    const res = await fetch("https://jsonplaceholder.typicode.com/posts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title: quote.text, body: quote.category, userId: 1 })
     });
-  } catch {
-    const mock = getMockServerQuotes();
-    mock.push({ text: quote.text, category: quote.category });
-    setMockServerQuotes(mock);
+    const result = await res.json();
+    console.log("Quote sent to server:", result);
+  } catch (err) {
+    console.error("Error sending quote:", err);
   }
 }
 
-// Alias in case the checker looks for this exact name
-function postQuoteToServer(quote) {
-  return sendQuoteToServer(quote);
-}
-
-// ---------- Conflict Resolution ----------
+// Allow user to resolve all conflicts in one action
 function resolveConflicts(choice) {
   if (conflictList.length === 0) {
     alert("No conflicts to resolve.");
     return;
   }
+
   conflictList.forEach(conf => {
     const idx = quotes.findIndex(q => q.text === conf.text);
     if (idx > -1) {
       quotes[idx] = (choice === "server") ? conf.server : conf.local;
     }
   });
+
   conflictList = [];
   saveQuotes();
   populateCategories();
   filterQuotes();
-  const banner = document.getElementById("conflictNotification");
-  if (banner) banner.classList.add("hidden");
-  alert("Conflicts resolved. Kept " + choice.toUpperCase() + " data.");
+
+  document.getElementById("conflictNotification")?.classList.add("hidden");
+  alert(`Conflicts resolved. Kept ${choice.toUpperCase()} data.`);
 }
 
 // ---------- Events & init ----------
-// ✅ Task 0 requirement: explicit event listener the checker searches for
-document.getElementById("newQuote").addEventListener("click", showRandomQuote);
+newQuoteBtn.addEventListener("click", showRandomQuote);
 
-// (You can keep this alternative too; it won’t break anything.)
-// const newQuoteBtn = document.getElementById("newQuote");
-// newQuoteBtn.addEventListener("click", showRandomQuote);
-
-window.onload = function () {
+// Populate UI and display last or random quote
+window.onload = () => {
   populateCategories();
 
-  const savedFilter = localStorage.getItem("selectedCategory");
-  if (savedFilter) {
-    const select = document.getElementById("categoryFilter");
-    if (select) select.value = savedFilter;
-    filterQuotes();
-  } else {
-    const last = JSON.parse(sessionStorage.getItem("lastQuote"));
-    if (last) renderQuote(last);
-    else showRandomQuote();
-  }
+  const last = JSON.parse(sessionStorage.getItem("lastQuote"));
+  if (last) displayQuote(last);
+  else showRandomQuote();
 
-  // Periodic sync every 30 seconds (checker looks for periodic checking)
-  setInterval(syncQuotes, 30000);
+  // Start periodic sync (every 30s)
+  setInterval(syncWithServer, 30000);
 };
+
